@@ -1,0 +1,78 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Scene {
+  id                String   @id
+  name              String
+  slug              String   @unique
+  summary           String
+  examples          String   // JSON array string
+  focusCapabilities String   // JSON array string
+  enabled           Boolean  @default(true)
+  sortOrder         Int      @default(0)
+  questions         Question[]
+  followUps         FollowUp[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("scenes")
+}
+
+model Question {
+  id           String   @id
+  sceneId      String
+  scene        Scene    @relation(fields: [sceneId], references: [id])
+  type         String   @default("single_choice")   // behavioral | scenario | self_check
+  questionType String   @default("behavioral")       // behavioral | scenario | self_check
+  category     String                                 // 起始方式 | 脱离AI可完成度 | AI介入位置 | 关键过程承担 | 依赖惯性
+  title        String
+  description  String?
+  weight       Int      @default(1)
+  isHighWeight Boolean  @default(false)
+  depthLevels  String   @default("[]")               // JSON: ["quick","standard","deep"]
+  sortOrder    Int      @default(0)
+  enabled      Boolean  @default(true)
+  options      QuestionOption[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("questions")
+}
+
+model QuestionOption {
+  id              String   @id
+  questionId      String
+  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  label           String
+  riskLevel       String?                              // continue | limit | pause
+  riskScore       Int?
+  dimensionScores String   @default("{}")              // JSON: {"understanding":2,"thinking":8,"organization":6,"execution":0,"judgment":2}
+  signals         String   @default("[]")              // JSON array string
+  triggerTags     String   @default("[]")              // JSON array string
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("question_options")
+}
+
+model FollowUp {
+  id                   String   @id
+  sceneId              String
+  scene                Scene    @relation(fields: [sceneId], references: [id])
+  level                String                            // continue | limit | pause
+  riskReasons          String   @default("[]")           // JSON array string
+  retainedCapabilities String   @default("[]")           // JSON array string
+  actionSuggestions    String   @default("[]")           // JSON array string
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([sceneId, level])
+  @@map("follow_ups")
+}

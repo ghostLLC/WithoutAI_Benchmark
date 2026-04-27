@@ -1,0 +1,44 @@
+{
+  "name": "@without-ai/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main",
+    "lint": "eslint src --ext .ts",
+    "clean": "rimraf dist",
+    "test": "jest --config jest.config.ts",
+    "test:watch": "jest --config jest.config.ts --watch",
+    "test:cov": "jest --config jest.config.ts --coverage",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "ts-node prisma/seed.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.3.0",
+    "@nestjs/config": "^3.1.0",
+    "@nestjs/core": "^10.3.0",
+    "@nestjs/platform-express": "^10.3.0",
+    "@prisma/client": "^5.10.0",
+    "@without-ai/shared": "workspace:*",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "reflect-metadata": "^0.2.1",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.3.0",
+    "@nestjs/schematics": "^10.1.0",
+    "@nestjs/testing": "^10.4.22",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.11.0",
+    "jest": "^30.3.0",
+    "prisma": "^5.10.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.4.9",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.4.0"
+  }
+}
