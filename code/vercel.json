@@ -1,11 +1,5 @@
 {
   "version": 2,
-  "experimentalServices": {
-    "web": {
-      "entrypoint": "apps/web",
-      "routePrefix": "/",
-      "buildCommand": "pnpm --filter @without-ai/web build",
-      "outputDirectory": ".next"
-    }
-  }
+  "buildCommand": "pnpm --filter @without-ai/web build",
+  "installCommand": "pnpm install"
 }
