@@ -1,5 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "pnpm --filter @without-ai/web build",
-  "installCommand": "pnpm install"
+  "experimentalServices": {
+    "web": {
+      "entrypoint": "apps/web",
+      "routePrefix": "/",
+      "framework": "nextjs"
+    }
+  }
 }
