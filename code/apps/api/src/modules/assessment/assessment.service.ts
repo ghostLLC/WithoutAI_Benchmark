@@ -79,12 +79,15 @@ export class AssessmentService {
 
     const hasAiExplain = explainResult.summary !== null;
     const hasAiSuggest = suggestResult.priority !== null;
+    const aiEnhanced = hasAiExplain || hasAiSuggest;
 
     result = {
       ...result,
       riskReasons: hasAiExplain ? explainResult.riskReasons : result.riskReasons,
       retainedCapabilities: hasAiExplain ? explainResult.retainedCapabilities : result.retainedCapabilities,
       actionSuggestions: hasAiSuggest ? suggestResult.suggestions : result.actionSuggestions,
+      aiEnhanced,
+      aiSummary: explainResult.summary ?? undefined,
     };
 
     return result;

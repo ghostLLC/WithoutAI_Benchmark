@@ -81,6 +81,9 @@ export class AiCoreService {
     type: 'question' | 'assessment';
     message: string;
     finalLevel: string | null;
+    baseRiskScore: number | null;
+    dimensions: Record<string, number> | null;
+    dominantPattern: string | null;
     riskReasons: string[] | null;
     retainedCapabilities: string[] | null;
     actionSuggestions: string[] | null;

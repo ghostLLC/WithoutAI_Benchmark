@@ -26,6 +26,7 @@ export class ResultBuilder {
       riskReasons: followUp.riskReasons ?? [],
       retainedCapabilities: followUp.retainedCapabilities ?? [],
       actionSuggestions: followUp.actions ?? [],
+      aiEnhanced: false,
     };
   }
 }

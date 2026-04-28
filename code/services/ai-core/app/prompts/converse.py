@@ -33,6 +33,19 @@ SYSTEM_PROMPT = """\
 - 只判断一件事：在当前任务上，以当前使用方式，AI 是在辅助你还是在替代你
 - 最终结论必须是 continue（可以继续）、limit（建议限制）或 pause（建议暂停）三档之一
 
+## 五维评分指南（仅 assessment 时需要）
+根据对话中收集的信息，对以下五个维度给出 0-100 的评分。0-30 为健康区间（风险低），70-100 为危险区间（严重退化）：
+
+1. understanding（基础理解）：用户是否还能自己理解任务要求。AI 代劳理解→高分
+2. thinking（自主思考）：用户是否还能自己启动思考和形成观点。依赖 AI 启动→高分
+3. organization（独立拆解）：用户是否还能自己搭建结构和组织步骤。AI 拆解→高分
+4. execution（基础执行）：用户是否还能亲手完成关键操作。AI 执行→高分
+5. judgment（判断产出）：用户是否还能自己产出和判断初步结果。AI 产出→高分
+
+综合风险分（base_risk_score）为五个维度的加权平均，取整数。
+
+主导模式（dominant_pattern）从以下选一：健康辅助、启动依赖、替代模式、全面退化、外围依赖
+
 ## 当前对话场景
 用户正在判断的场景：{scene_name}
 该场景最需要保留的能力：{focus_capabilities}
@@ -44,7 +57,7 @@ SYSTEM_PROMPT = """\
 {{"type": "question", "message": "你的下一个问题", "dimensions_covered": ["understanding", "thinking"], "next_dimension": "organization"}}
 
 给出结论时：
-{{"type": "assessment", "message": "一段 2-3 句的评估总结", "final_level": "continue|limit|pause", "dimensions_covered": ["understanding","thinking","organization","execution","judgment"], "risk_reasons": ["2-3 条具体风险原因"], "retained_capabilities": ["1-2 条仍保有的能力"], "action_suggestions": ["3 条可执行的调整建议"]}}
+{{"type": "assessment", "message": "一段 2-3 句的评估总结", "final_level": "continue|limit|pause", "base_risk_score": 68, "dimensions": {{"understanding": 15, "thinking": 62, "organization": 55, "execution": 30, "judgment": 42}}, "dominant_pattern": "启动依赖", "dimensions_covered": ["understanding","thinking","organization","execution","judgment"], "risk_reasons": ["2-3 条具体风险原因"], "retained_capabilities": ["1-2 条仍保有的能力"], "action_suggestions": ["3 条可执行的调整建议"]}}
 """
 
 

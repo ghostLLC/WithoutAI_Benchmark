@@ -36,7 +36,7 @@ def _parse_json(raw: str) -> dict | None:
 
 
 def _build_fallback(request: ConverseRequest) -> ConverseResponse:
-    """LLM 不可用时的 fallback：预设问题序列，带维度追踪。"""
+    """LLM 不可用时的 fallback：预设问题序列，带维度追踪和评分。"""
     asked = len([m for m in request.history if m.role == "ai"])
     covered = [d for d, _ in DIMENSION_QUESTIONS[:asked]]
 
@@ -46,6 +46,9 @@ def _build_fallback(request: ConverseRequest) -> ConverseResponse:
             message="根据我们的对话，我判断你目前仍处于辅助使用区间。AI 还没有明显替代你的核心能力。建议继续保持当前边界。",
             dimensions_covered=[d for d, _ in DIMENSION_QUESTIONS],
             final_level="continue",
+            base_risk_score=18,
+            dimensions={"understanding": 15, "thinking": 20, "organization": 18, "execution": 15, "judgment": 22},
+            dominant_pattern="健康辅助",
             risk_reasons=[],
             retained_capabilities=["你仍能独立完成核心过程。"],
             action_suggestions=[
@@ -105,6 +108,9 @@ async def converse(
             message=parsed.get("message", ""),
             dimensions_covered=parsed.get("dimensions_covered", []),
             final_level=parsed.get("final_level"),
+            base_risk_score=parsed.get("base_risk_score"),
+            dimensions=parsed.get("dimensions"),
+            dominant_pattern=parsed.get("dominant_pattern"),
             risk_reasons=parsed.get("risk_reasons"),
             retained_capabilities=parsed.get("retained_capabilities"),
             action_suggestions=parsed.get("action_suggestions"),

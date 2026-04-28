@@ -29,7 +29,7 @@ WithoutAI Benchmark 关注的不是"AI 用得熟不熟"，而是：
 - 你是否已经从 **辅助使用 AI** 滑向 **替代使用 AI**
 - 在某类具体任务里，你是否还保有 **最低限度的独立完成能力**
 - 系统能否输出清晰的三档判断：**继续 / 限制 / 暂停**
-- AI 是否应该扮演 **增强解释与建议的能力层**，而不是直接替代业务规则
+- 五维能力画像：基础理解、自主思考、独立拆解、基础执行、判断产出
 
 ---
 
@@ -37,25 +37,25 @@ WithoutAI Benchmark 关注的不是"AI 用得熟不熟"，而是：
 
 ### 测评模式
 
-像 MBTI 一样标准化的快速判断。
+标准化问卷快速判断。
 
-1. 选择一个任务场景
-2. 回答 8-45 道行为化选择题（快速/标准/深度三档，围绕起始方式、AI 介入位置、依赖惯性等维度）
-3. 系统基于加权风险分 + 触发规则引擎输出三档结论
+1. 选择任务场景，选择深度（快速 / 标准 / 深度）
+2. 回答行为化选择题，覆盖起始方式、AI 介入位置、依赖惯性等维度
+3. 系统基于加权风险分 + 触发规则引擎 + 五维评分输出三档结论
 4. 获得原因解释、保留能力和行动建议
 
 **特点**：稳定、可复现、无需 AI Core 也能跑。
 
 ### 对话模式
 
-与 AI 评估师多轮自然交流，获得个性化深入判断。
+与 AI 评估师多轮自然交流，AI 根据对话内容直接给出五维评分和综合判断。
 
 1. 选择任务场景
 2. AI 评估师逐轮提问（5-7 轮），根据你的回答动态调整
-3. 对话自然收束为评估结论
+3. 对话自然收束为评估结论，附带维度评分
 4. 获得针对你具体使用习惯的个性化建议
 
-**特点**：深入、自然、需要 AI Core + LLM API Key。
+**特点**：深入、自然、需要 AI Core + LLM API Key。两种模式共用同一套结果页结构。
 
 ---
 
@@ -74,12 +74,12 @@ WithoutAI Benchmark 关注的不是"AI 用得熟不熟"，而是：
 
 | 模块 | 状态 | 说明 |
 |------|------|------|
-| Web 前端 | ✅ 完成 | Next.js 14，双模式入口，响应式适配，亮/暗色主题 |
-| API / BFF | ✅ 完成 | NestJS + Prisma + SQLite，5 端点，完整校验 + 限流 |
+| Web 前端 | ✅ 完成 | Next.js 14，双模式入口，明亮主题，响应式适配 |
+| API / BFF | ✅ 完成 | NestJS + Prisma + SQLite，6 端点，完整校验 |
 | AI Core | ✅ 完成 | FastAPI，3 端点（explain / suggest / converse），LLM + 多级降级 |
-| 题库 | ✅ 完成 | 4 场景 × 45 题（共 180 题），五维评分向量，三档深度 |
-| 测试 | ✅ 完成 | 30 tests（8 API + 22 AI Core），核心评分管线已覆盖 |
-| CI / 部署 | ⏳ 待做 | 尚未配置 |
+| 题库 | ✅ 完成 | 4 场景，五维评分向量，三档深度 |
+| 测试 | ✅ 完成 | 22 AI Core + Jest API 测试，核心评分管线已覆盖 |
+| 部署 | ✅ 就绪 | Vercel + Railway $0 方案，Docker Compose 自托管方案 |
 
 ---
 
@@ -87,8 +87,8 @@ WithoutAI Benchmark 关注的不是"AI 用得熟不熟"，而是：
 
 ```
 User → apps/web (Next.js :3001)
-         ├─ 测评模式 → 8/20/45 道题（三档深度） → 五维评分 + 雷达图
-         └─ 对话模式 → 多轮聊天 → LLM 综合判断
+         ├─ 测评模式 → 选择题 → 五维评分 + 风险仪表盘
+         └─ 对话模式 → 多轮聊天 → AI 估算维度分 + 综合判断
               ↓
        apps/api (NestJS :3000)
          ├─ 评分管线：Calculator → TriggerEngine → LevelDecider → Builder
@@ -97,7 +97,7 @@ User → apps/web (Next.js :3001)
        services/ai-core (FastAPI :8000)
          ├─ /ai/explain   — 风险解释增强
          ├─ /ai/suggest   — 行动建议优化
-         └─ /ai/converse  — 对话式评估
+         └─ /ai/converse  — 对话式评估（含五维评分）
               ↓
        DeepSeek / OpenAI-compatible LLM（可选）
 ```
@@ -106,7 +106,7 @@ User → apps/web (Next.js :3001)
 
 - **前端**：不持有评分规则，不直连 AI Core
 - **API / BFF**：统一业务出口，负责规则计算、结果组装、AI 调用编排
-- **AI Core**：只增强解释与建议，不直接决定产品主规则（测评模式）；对话模式由 LLM 主导评估但仍受产品边界约束
+- **AI Core**：测评模式下只增强解释与建议，不直接决定产品主规则；对话模式下 LLM 给出评分但仍受产品边界约束
 - **Shared / Contracts**：保证跨模块字段与协议一致
 
 ---
@@ -120,7 +120,7 @@ code/
 │   └── api/                    # NestJS API / BFF
 │       ├── prisma/             # schema / migrations / seed
 │       └── src/
-│           ├── common/         # Prisma / filter / middleware / rate-limit
+│           ├── common/         # Prisma / filter / middleware
 │           └── modules/assessment/  # 评分管线 + 对话编排
 ├── services/
 │   └── ai-core/                # FastAPI AI 服务
@@ -133,6 +133,13 @@ code/
 ├── contracts/                  # API 契约文档
 ├── docs/                       # 架构 / 协作 / 依赖说明
 ├── scripts/                    # 启动脚本
+├── Dockerfile.api              # API Docker 镜像
+├── Dockerfile.web              # 前端 Docker 镜像
+├── Dockerfile.ai               # AI Core Docker 镜像
+├── docker-compose.yml          # 一键部署编排
+├── vercel.json                 # Vercel 部署配置
+├── DEPLOY.md                   # Vercel + Railway $0 部署指南
+├── .env.production.example     # 生产环境变量模板
 ├── start-dev.bat               # Windows 一键启动
 ├── pnpm-workspace.yaml
 └── README.md
@@ -195,10 +202,23 @@ pnpm dev:ai      # AI Core → http://localhost:8000
 ### 6) 运行测试
 
 ```bash
-pnpm test        # 运行全部 30 个测试
-pnpm test:api    # 仅 API 测试（8 tests）
+pnpm test        # 运行全部测试
+pnpm test:api    # 仅 API 测试
 pnpm test:ai     # 仅 AI Core 测试（22 tests）
 ```
+
+---
+
+## 上线部署
+
+两种方式：
+
+| 方式 | 成本 | 适合 |
+|------|------|------|
+| Vercel + Railway | $0/月 | 快速上线、低流量 |
+| Docker Compose（自托管 VPS）| ~¥24/月 | 稳定、可预期 |
+
+详见 [`DEPLOY.md`](DEPLOY.md)
 
 ---
 
@@ -233,10 +253,10 @@ AI_CORE_ENABLE_LLM=false
 |--------|------|-------------|
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/assessment/scenes` | 获取场景列表 |
-| GET | `/api/assessment/scenes/:sceneId/questions` | 获取题目列表（支持 ?depth=quick|standard|deep） |
+| GET | `/api/assessment/scenes/:sceneId/questions?depth=` | 获取题目列表 |
 | POST | `/api/assessment/submit` | 提交测评并返回结果 |
 | POST | `/api/assessment/converse` | 对话式评估（需要 AI Core） |
-| GET | `/api/assessment/follow-up/:level?sceneId=xxx` | 获取 follow-up 建议 |
+| GET | `/api/assessment/follow-up/:level?sceneId=` | 获取 follow-up 建议 |
 
 ### AI Core
 
@@ -245,7 +265,7 @@ AI_CORE_ENABLE_LLM=false
 | GET | `/health` | 健康检查（含 LLM 连通性） |
 | POST | `/ai/explain` | 风险解释增强 |
 | POST | `/ai/suggest` | 行动建议优化 |
-| POST | `/ai/converse` | 对话式评估 |
+| POST | `/ai/converse` | 对话式评估（含五维评分） |
 
 详细定义见 `contracts/api-contracts.md`
 
@@ -261,15 +281,15 @@ AI_CORE_ENABLE_LLM=false
                                  + 跨维度模式校正 + 触发规则校正 + 单维≥80 强制 pause
   → [4] ResultBuilder         — 从数据库取 FollowUp 文案组装结果
   → [5] AiCoreService         — 调用 AI Core 增强文案（失败则静默降级）
-  → 返回三档结论 + 原因 + 保留能力 + 行动建议
+  → 返回三档结论 + 五维评分 + 风险仪表盘 + 原因 + 保留能力 + 行动建议
 ```
 
 ---
 
 ## 文档索引
 
-- 产品主文档：`product-docs/ai-usage-product-doc-v1.md`
-- 网页 PRD：`product-docs/ai-usage-web-prd-pageflow-tasklist-v1.md`
+- 产品主文档：`../product-docs/ai-usage-product-doc-v1.md`
+- 网页 PRD：`../product-docs/ai-usage-web-prd-pageflow-tasklist-v1.md`
 - 架构设计：`docs/architecture.md`
 - 协作约定：`docs/collaboration.md`
 - 依赖说明：`docs/dependencies.md`

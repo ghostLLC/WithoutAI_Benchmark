@@ -85,6 +85,8 @@ export interface AssessmentResult {
   riskReasons: string[];
   retainedCapabilities: string[];
   actionSuggestions: string[];
+  aiEnhanced: boolean;
+  aiSummary?: string;
 }
 
 // ====== 后续动作 ======

@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  ai-core:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+    ports:
+      - "8000:8000"
+    environment:
+      - AI_CORE_LLM_API_KEY=${AI_CORE_LLM_API_KEY:-}
+      - AI_CORE_LLM_BASE_URL=${AI_CORE_LLM_BASE_URL:-https://api.deepseek.com}
+      - AI_CORE_LLM_MODEL=${AI_CORE_LLM_MODEL:-deepseek-v4-flash}
+      - AI_CORE_ENABLE_LLM=${AI_CORE_ENABLE_LLM:-true}
+      - AI_CORE_FALLBACK_ON_ERROR=${AI_CORE_FALLBACK_ON_ERROR:-true}
+      - AI_CORE_LLM_MAX_TOKENS=${AI_CORE_LLM_MAX_TOKENS:-1024}
+      - AI_CORE_LLM_TEMPERATURE=${AI_CORE_LLM_TEMPERATURE:-1.0}
+      - AI_CORE_LLM_RESPONSE_FORMAT_JSON=${AI_CORE_LLM_RESPONSE_FORMAT_JSON:-true}
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/data/dev.db
+      - AI_CORE_URL=http://ai-core:8000
+      - PORT=3000
+    volumes:
+      - api-data:/data
+    depends_on:
+      - ai-core
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  api-data:
