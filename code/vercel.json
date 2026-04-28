@@ -1,14 +1,7 @@
 {
   "version": 2,
-  "rootDirectory": "code",
   "buildCommand": "pnpm --filter @without-ai/web build",
   "outputDirectory": "apps/web/.next",
   "installCommand": "pnpm install",
-  "framework": "nextjs",
-  "experimentalServices": {
-    "web": {
-      "entrypoint": "apps/web",
-      "routePrefix": "/"
-    }
-  }
+  "framework": "nextjs"
 }
