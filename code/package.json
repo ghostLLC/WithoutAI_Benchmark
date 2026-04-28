@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "聚焦「是否应该继续使用 AI」的任务级判断工具",
+  "packageManager": "pnpm@9.12.0",
   "scripts": {
     "dev:web": "pnpm --filter @without-ai/web dev",
     "dev:api": "pnpm --filter @without-ai/api dev",
@@ -17,7 +18,7 @@
     "test": "pnpm run test:api && pnpm run test:ai"
   },
   "engines": {
-    "node": ">=20",
-    "pnpm": ">=8"
+    "node": "20.x",
+    "pnpm": "9.x"
   }
 }
