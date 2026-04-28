@@ -1,3 +1,7 @@
 {
-  "buildCommand": "pnpm --filter @without-ai/shared build && next build"
+  "buildCommand": "pnpm --filter @without-ai/web build",
+  "outputDirectory": "code/apps/web/.next",
+  "framework": "nextjs",
+  "installCommand": "pnpm install",
+  "rootDirectory": "code"
 }
