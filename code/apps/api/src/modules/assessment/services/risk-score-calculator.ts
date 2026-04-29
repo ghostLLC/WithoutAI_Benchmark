@@ -3,6 +3,13 @@ import { ConfigRepository } from '../repositories/config.repository';
 import type { SubmittedAnswer, DimensionProfile, Dimension, RiskPattern } from '@without-ai/shared';
 import { DIMENSIONS } from '@without-ai/shared';
 
+const SCENE_WEIGHTS: Record<string, Record<string, number>> = {
+  'writing-report':  { understanding: 1.0, thinking: 1.5, organization: 1.5, execution: 0.7, judgment: 1.0 },
+  'learning-research': { understanding: 1.5, thinking: 1.3, organization: 1.0, execution: 0.7, judgment: 1.0 },
+  'basic-coding':     { understanding: 0.7, thinking: 1.0, organization: 1.3, execution: 1.5, judgment: 1.0 },
+  'basic-data':       { understanding: 1.3, thinking: 0.7, organization: 1.0, execution: 1.0, judgment: 1.5 },
+};
+
 @Injectable()
 export class RiskScoreCalculator {
   constructor(private readonly configRepository: ConfigRepository) {}
@@ -15,6 +22,7 @@ export class RiskScoreCalculator {
     baseRiskScore: number;
     dimensions: DimensionProfile;
     dominantPattern: RiskPattern;
+    completionAvgScore: number;
   }> {
     const questions = await this.configRepository.getQuestionsByScene(sceneId, depth);
     const profile: DimensionProfile = {
@@ -22,6 +30,8 @@ export class RiskScoreCalculator {
     };
 
     let totalAnswered = 0;
+    let completionTotal = 0;
+    let completionCount = 0;
 
     for (const question of questions) {
       for (const answer of answers) {
@@ -35,6 +45,15 @@ export class RiskScoreCalculator {
             profile[dim] += dims[dim] ?? 0;
           }
           totalAnswered++;
+
+          // 收集"脱离AI可完成度"类题目用于兜底判断
+          if (question.category === '脱离AI可完成度') {
+            const riskScore = option.riskScore ?? Math.round(
+              Object.values(dims).reduce((a, b) => a + b, 0) / DIMENSIONS.length,
+            );
+            completionTotal += riskScore;
+            completionCount++;
+          }
         }
       }
     }
@@ -48,13 +67,23 @@ export class RiskScoreCalculator {
       normProfile[dim] = Math.min(100, Math.round(profile[dim] * normalize));
     }
 
-    const baseRiskScore = Math.round(
-      Object.values(normProfile).reduce((a, b) => a + b, 0) / DIMENSIONS.length,
-    );
+    // 场景感知加权：应用维度权重矩阵
+    const weights = SCENE_WEIGHTS[sceneId] ?? {};
+    const weightedSum = DIMENSIONS.reduce((sum, dim) => {
+      const w = weights[dim] ?? 1.0;
+      return sum + normProfile[dim] * w;
+    }, 0);
+    const weightSum = DIMENSIONS.reduce((sum, dim) => sum + (weights[dim] ?? 1.0), 0);
+
+    const baseRiskScore = Math.round(weightedSum / weightSum);
+
+    const completionAvgScore = completionCount > 0
+      ? Math.round(completionTotal / completionCount)
+      : 0;
 
     const dominantPattern = this.detectPattern(normProfile);
 
-    return { baseRiskScore, dimensions: normProfile, dominantPattern };
+    return { baseRiskScore, dimensions: normProfile, dominantPattern, completionAvgScore };
   }
 
   private detectPattern(profile: DimensionProfile): RiskPattern {

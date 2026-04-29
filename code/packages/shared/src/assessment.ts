@@ -74,6 +74,13 @@ export type DimensionProfile = Record<Dimension, number>;
 // ====== 风险模式 ======
 export type RiskPattern = '全面退化' | '替代模式' | '启动依赖' | '外围依赖' | '健康辅助' | null;
 
+// ====== 一致性检测 ======
+export interface ConsistencyResult {
+  passed: boolean;
+  inconsistencies: string[];
+  suggestionLevel: AssessmentLevel | null;
+}
+
 // ====== 评估结果 ======
 export interface AssessmentResult {
   sceneId: string;
@@ -87,6 +94,7 @@ export interface AssessmentResult {
   actionSuggestions: string[];
   aiEnhanced: boolean;
   aiSummary?: string;
+  consistencyCheck?: ConsistencyResult;
 }
 
 // ====== 后续动作 ======

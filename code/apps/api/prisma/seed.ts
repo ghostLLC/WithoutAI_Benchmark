@@ -549,14 +549,14 @@ function generateCodeQuestions(): QDef[] {
     if (scene.id === 'basic-coding') {
       // Quick (8)
       result.push(q(`${sid}_q01`, scene.id, 'behavioral', '起始方式', '遇到一个编程任务，你通常怎么开始？', ['quick','standard','deep'], ++sort, [
-        o('先自己分析需求，想清楚逻辑再动手', 'continue', [0,0,1,0,1]),
-        o('先问 AI 给一个框架或方案', 'limit', [1,3,5,2,2], ['replacement'], ['first_process_replaced']),
-        o('直接让 AI 写代码，我来看结果', 'pause', [3,7,7,5,6], ['replacement','dependency'], ['core_step_fully_replaced','cannot_finish_without_ai']),
+        o('先自己分析需求，想清楚逻辑再动手', 'continue', [0,0,2,1,1]),
+        o('先问 AI 给一个框架或方案', 'limit', [1,4,6,2,2], ['replacement'], ['first_process_replaced']),
+        o('直接让 AI 写代码，我来看结果', 'pause', [3,8,7,6,6], ['replacement','dependency'], ['core_step_fully_replaced','cannot_finish_without_ai']),
       ]));
       result.push(q(`${sid}_q02`, scene.id, 'behavioral', '脱离AI可完成度', '不借助 AI，你能不能独立写出一个简单功能的代码？', ['quick','standard','deep'], ++sort, [
-        o('可以，简单功能我能自己实现', 'continue', [0,0,0,0,0]),
-        o('比较吃力，我现在更习惯让 AI 写', 'limit', [1,3,2,3,2], ['weakening','dependency']),
-        o('不太行，我已经不自己写代码了', 'pause', [3,6,5,7,6], ['replacement','dependency'], ['cannot_finish_without_ai','core_step_fully_replaced']),
+        o('可以，简单功能我能自己实现', 'continue', [0,0,0,1,0]),
+        o('比较吃力，我现在更习惯让 AI 写', 'limit', [1,3,2,5,2], ['weakening','dependency']),
+        o('不太行，我已经不自己写代码了', 'pause', [3,5,4,8,4], ['replacement','dependency'], ['cannot_finish_without_ai','core_step_fully_replaced']),
       ]));
       result.push(q(`${sid}_q03`, scene.id, 'behavioral', 'AI介入位置', '代码出 bug 时，你通常怎么做？', ['quick','standard','deep'], ++sort, [
         o('先自己读报错、加 log，排查不出来再求助 AI', 'continue', [0,0,1,2,1]),
@@ -569,9 +569,9 @@ function generateCodeQuestions(): QDef[] {
         o('不太能，能用就行', 'pause', [4,5,4,4,4], ['dependency']),
       ]));
       result.push(q(`${sid}_q05`, scene.id, 'behavioral', '依赖惯性', '编程时如果不能先问 AI，你通常会怎样？', ['quick','standard','deep'], ++sort, [
-        o('只是写得慢一些，但还能自己写出基础代码', 'continue', [0,1,1,1,1]),
-        o('会比较吃力，很多基础逻辑要想很久', 'limit', [1,4,3,3,2], ['dependency'], ['dependency_signal_detected']),
-        o('基本不会了，我的编程能力退化了很多', 'pause', [3,7,6,7,6], ['dependency'], ['cannot_finish_without_ai']),
+        o('只是写得慢一些，但还能自己写出基础代码', 'continue', [0,1,1,2,1]),
+        o('会比较吃力，很多基础逻辑要想很久', 'limit', [1,5,3,4,2], ['dependency'], ['dependency_signal_detected']),
+        o('基本不会了，我的编程能力退化了很多', 'pause', [3,7,5,8,5], ['dependency'], ['cannot_finish_without_ai']),
       ]));
       result.push(q(`${sid}_q06`, scene.id, 'scenario', '起始方式', '你的主管让你实现一个新功能，没有详细说明。你首先做什么？', ['quick','standard','deep'], ++sort, [
         o('自己分析需求，画出流程', 'continue', [0,0,1,0,1]),
@@ -585,8 +585,8 @@ function generateCodeQuestions(): QDef[] {
       ]));
       result.push(q(`${sid}_q08`, scene.id, 'scenario', '依赖惯性', '如果公司要求接下来一个月同事之间不能用 AI 写代码，你的反应是？', ['quick','standard','deep'], ++sort, [
         o('没问题，我还是能独立开发的', 'continue', [0,0,0,1,0]),
-        o('效率会下降，但应该还能撑住', 'limit', [0,2,1,2,1]),
-        o('会很慌，我可能会很吃力', 'pause', [2,6,4,6,4], ['dependency'], ['cannot_finish_without_ai']),
+        o('效率会下降，但应该还能撑住', 'limit', [0,3,1,3,1]),
+        o('会很慌，我可能会很吃力', 'pause', [2,6,3,7,4], ['dependency'], ['cannot_finish_without_ai']),
       ]));
 
       // Standard (12 more = 20 total)
@@ -696,14 +696,14 @@ function generateCodeQuestions(): QDef[] {
     if (scene.id === 'basic-data') {
       // Quick (8)
       result.push(q(`${sid}_q01`, scene.id, 'behavioral', '起始方式', '拿到一份原始数据，你通常怎么开始处理？', ['quick','standard','deep'], ++sort, [
-        o('先自己看数据结构，理解字段含义', 'continue', [0,1,0,0,1]),
-        o('直接让 AI 帮我清洗和分析', 'limit', [2,3,3,2,2], ['replacement'], ['first_process_replaced']),
-        o('把原始数据发给 AI，让它从头处理', 'pause', [4,6,5,5,5], ['replacement','dependency'], ['core_step_fully_replaced']),
+        o('先自己看数据结构，理解字段含义', 'continue', [1,0,0,0,1]),
+        o('直接让 AI 帮我清洗和分析', 'limit', [4,3,3,2,2], ['replacement'], ['first_process_replaced']),
+        o('把原始数据发给 AI，让它从头处理', 'pause', [7,5,4,5,5], ['replacement','dependency'], ['core_step_fully_replaced']),
       ]));
       result.push(q(`${sid}_q02`, scene.id, 'behavioral', '脱离AI可完成度', '不用 AI，你能不能独立完成基础的数据清洗和统计？', ['quick','standard','deep'], ++sort, [
         o('可以，基础操作我没问题', 'continue', [0,0,0,1,0]),
-        o('比较困难，我现在习惯交给 AI 处理', 'limit', [2,3,2,4,2], ['weakening','dependency'], ['dependency_signal_detected']),
-        o('基本不会了，我已经不用自己操作了', 'pause', [4,6,4,7,5], ['replacement','dependency'], ['cannot_finish_without_ai','core_step_fully_replaced']),
+        o('比较困难，我现在习惯交给 AI 处理', 'limit', [1,4,2,5,2], ['weakening','dependency'], ['dependency_signal_detected']),
+        o('基本不会了，我已经不用自己操作了', 'pause', [3,5,3,8,4], ['replacement','dependency'], ['cannot_finish_without_ai','core_step_fully_replaced']),
       ]));
       result.push(q(`${sid}_q03`, scene.id, 'behavioral', 'AI介入位置', '数据处理的判断环节（比如选统计方法、识别异常值），谁在做？', ['quick','standard','deep'], ++sort, [
         o('我自己判断，AI 只是执行工具', 'continue', [0,0,0,0,1]),
@@ -716,9 +716,9 @@ function generateCodeQuestions(): QDef[] {
         o('基本不能，AI 说什么就是什么', 'pause', [4,5,2,2,5], ['dependency','replacement']),
       ]));
       result.push(q(`${sid}_q05`, scene.id, 'behavioral', '依赖惯性', '处理数据时如果不能先问 AI，你通常会怎样？', ['quick','standard','deep'], ++sort, [
-        o('只是处理得慢一些，但还能自己完成基础操作', 'continue', [0,1,0,1,0]),
-        o('会比较困难，很多判断拿不准', 'limit', [1,3,2,3,2], ['dependency'], ['dependency_signal_detected']),
-        o('基本无从下手了', 'pause', [3,6,4,6,5], ['dependency'], ['cannot_finish_without_ai']),
+        o('只是处理得慢一些，但还能自己完成基础操作', 'continue', [0,1,0,2,1]),
+        o('会比较困难，很多判断拿不准', 'limit', [1,3,1,4,4], ['dependency'], ['dependency_signal_detected']),
+        o('基本无从下手了', 'pause', [2,5,3,7,6], ['dependency'], ['cannot_finish_without_ai']),
       ]));
       result.push(q(`${sid}_q06`, scene.id, 'scenario', '起始方式', '领导让你分析一组销售数据并给出结论。你的流程是？', ['quick','standard','deep'], ++sort, [
         o('先自己看数据，理解趋势，再决定分析方向', 'continue', [0,0,0,0,1]),
@@ -732,8 +732,8 @@ function generateCodeQuestions(): QDef[] {
       ]));
       result.push(q(`${sid}_q08`, scene.id, 'scenario', '依赖惯性', '你的 AI 分析工具突然坏了，手头的数据要今天交。你还能搞定吗？', ['quick','standard','deep'], ++sort, [
         o('能，换个工具或不靠 AI 也能完成', 'continue', [0,0,0,0,0]),
-        o('能，但效率和准确率会下降', 'limit', [0,2,1,2,1]),
-        o('基本搞不定，我依赖 AI 分析', 'pause', [3,5,3,5,4], ['dependency'], ['cannot_finish_without_ai']),
+        o('能，但效率和准确率会下降', 'limit', [0,2,1,3,2]),
+        o('基本搞不定，我依赖 AI 分析', 'pause', [2,5,3,7,5], ['dependency'], ['cannot_finish_without_ai']),
       ]));
 
       // Standard (12 more = 20 total)
@@ -910,16 +910,16 @@ async function main() {
 
   // Follow-ups (keep existing structure)
   const followUps = [
-    { id: 'fu_wr_continue', sceneId: 'writing-report', level: 'continue', riskReasons: JSON.stringify([]), retainedCapabilities: JSON.stringify(['你能自己理解任务并启动写作。', '你能独立完成从提纲到初版的全过程。']), actionSuggestions: JSON.stringify(['继续把 AI 限制在润色、检查和补充环节。', '定期脱离 AI 独立完成一版，确认能力没有滑走。']) },
+    { id: 'fu_wr_continue', sceneId: 'writing-report', level: 'continue', riskReasons: JSON.stringify(['你目前的边界还算安全，但如果让 AI 提前进入理解和构思环节，边界会开始松动。']), retainedCapabilities: JSON.stringify(['你能自己理解任务并启动写作。', '你能独立完成从提纲到初版的全过程。']), actionSuggestions: JSON.stringify(['继续把 AI 限制在润色、检查和补充环节。', '定期脱离 AI 独立完成一版，确认能力没有滑走。']) },
     { id: 'fu_wr_limit', sceneId: 'writing-report', level: 'limit', riskReasons: JSON.stringify(['你越来越依赖 AI 帮你启动第一步。', 'AI 已开始进入结构组织或第一版产出。']), retainedCapabilities: JSON.stringify(['你仍保留部分任务理解能力。', '你仍能完成局部修改。']), actionSuggestions: JSON.stringify(['先自己完成首轮理解和结构，再使用 AI。', '把 AI 限制在润色、检查、补充环节。', '缩减对第一版生成的依赖。']) },
     { id: 'fu_wr_pause', sceneId: 'writing-report', level: 'pause', riskReasons: JSON.stringify(['核心写作过程正被 AI 直接接管。', '你已经较难在没有 AI 的情况下独立完成最小版本。']), retainedCapabilities: JSON.stringify(['你仍可能保留局部修改和理解成品的能力。']), actionSuggestions: JSON.stringify(['先暂停让 AI 生成第一版完整内容。', '把首次理解、提纲搭建和初版输出收回自己完成。', '先从更小任务恢复独立写作能力。']) },
-    { id: 'fu_lr_continue', sceneId: 'learning-research', level: 'continue', riskReasons: JSON.stringify([]), retainedCapabilities: JSON.stringify(['你能独立阅读原材料并形成自己的理解。', '你能自己提炼要点并组织信息。']), actionSuggestions: JSON.stringify(['继续把 AI 限制在补充和验证环节。', '保持定期纯手动整理资料的习惯。']) },
+    { id: 'fu_lr_continue', sceneId: 'learning-research', level: 'continue', riskReasons: JSON.stringify(['当前你的学习和理解过程仍由自己主导，但让 AI 代读代总结的习惯一旦形成，阅读耐心会持续下降。']), retainedCapabilities: JSON.stringify(['你能独立阅读原材料并形成自己的理解。', '你能自己提炼要点并组织信息。']), actionSuggestions: JSON.stringify(['继续把 AI 限制在补充和验证环节。', '保持定期纯手动整理资料的习惯。']) },
     { id: 'fu_lr_limit', sceneId: 'learning-research', level: 'limit', riskReasons: JSON.stringify(['你越来越依赖 AI 帮你总结和提炼信息。', '自己阅读和概括的耐心在降低。']), retainedCapabilities: JSON.stringify(['你仍能部分理解和筛选 AI 的输出。', '你对资料内容仍有一定直觉。']), actionSuggestions: JSON.stringify(['强制自己先读原文再做笔记，再让 AI 补充。', '减少对 AI 摘要的依赖，逐渐恢复自己概括的习惯。', '把 AI 限制在帮你查漏补缺的角色。']) },
     { id: 'fu_lr_pause', sceneId: 'learning-research', level: 'pause', riskReasons: JSON.stringify(['核心理解和概括过程正被 AI 替代。', '你已经很难在不借助 AI 的情况下独立读完并理解一段资料。']), retainedCapabilities: JSON.stringify(['你仍可能保留部分信息直觉和筛选能力。']), actionSuggestions: JSON.stringify(['暂停让 AI 直接替你总结资料。', '先从短文开始恢复独立阅读和概括能力。', '把理解资料的第一遍重新收回自己完成。']) },
-    { id: 'fu_bc_continue', sceneId: 'basic-coding', level: 'continue', riskReasons: JSON.stringify([]), retainedCapabilities: JSON.stringify(['你能自己理解需求并编写简单代码。', '你能独立排查基础 bug。']), actionSuggestions: JSON.stringify(['继续把 AI 限制在提供建议和优化环节。', '定期独立完成小功能，确认能力没有退步。']) },
+    { id: 'fu_bc_continue', sceneId: 'basic-coding', level: 'continue', riskReasons: JSON.stringify(['你仍保持独立编码的核心能力，但要注意：一旦开始习惯让 AI 替你定位问题和生成初版代码，执行能力会最先下滑。']), retainedCapabilities: JSON.stringify(['你能自己理解需求并编写简单代码。', '你能独立排查基础 bug。']), actionSuggestions: JSON.stringify(['继续把 AI 限制在提供建议和优化环节。', '定期独立完成小功能，确认能力没有退步。']) },
     { id: 'fu_bc_limit', sceneId: 'basic-coding', level: 'limit', riskReasons: JSON.stringify(['你越来越依赖 AI 帮你开始编码。', 'AI 已开始介入调试和问题排查的核心过程。']), retainedCapabilities: JSON.stringify(['你仍能理解 AI 生成的代码。', '你仍可做局部修改。']), actionSuggestions: JSON.stringify(['先自己分析需求和写出伪代码，再让 AI 辅助。', '把调试的第一遍留给自己，排查不出再求助 AI。', '缩减让 AI 直接写完整功能的频率。']) },
     { id: 'fu_bc_pause', sceneId: 'basic-coding', level: 'pause', riskReasons: JSON.stringify(['核心编码和调试过程正被 AI 全面接管。', '你已经较难独立完成一个简单的编程任务。']), retainedCapabilities: JSON.stringify(['你仍可能保留代码阅读和局部修改的能力。']), actionSuggestions: JSON.stringify(['暂停让 AI 直接生成代码。', '从最简单的练习开始恢复独立编码能力。', '把需求分析、方案设计和代码实现都先自己做完。']) },
-    { id: 'fu_bd_continue', sceneId: 'basic-data', level: 'continue', riskReasons: JSON.stringify([]), retainedCapabilities: JSON.stringify(['你能自己判断数据质量并选择处理方法。', '你能验证 AI 分析结果的合理性。']), actionSuggestions: JSON.stringify(['继续把 AI 限制在执行和辅助环节。', '定期手动处理数据，保持对数据的直觉。']) },
+    { id: 'fu_bd_continue', sceneId: 'basic-data', level: 'continue', riskReasons: JSON.stringify(['你仍保有对数据的独立判断力，但数据直觉是需要持续锻炼的——长期让 AI 代替你做判断，嗅觉会慢慢变钝。']), retainedCapabilities: JSON.stringify(['你能自己判断数据质量并选择处理方法。', '你能验证 AI 分析结果的合理性。']), actionSuggestions: JSON.stringify(['继续把 AI 限制在执行和辅助环节。', '定期手动处理数据，保持对数据的直觉。']) },
     { id: 'fu_bd_limit', sceneId: 'basic-data', level: 'limit', riskReasons: JSON.stringify(['你越来越依赖 AI 帮你做数据处理的核心判断。', 'AI 已开始介入统计方法选择和异常识别。']), retainedCapabilities: JSON.stringify(['你仍能部分理解 AI 的处理过程。', '你仍能做一些基础操作。']), actionSuggestions: JSON.stringify(['先自己看数据、判断处理方向，再让 AI 执行。', '把方法选择和结果审核环节收回自己。', '减少直接让 AI 端到端处理数据的频率。']) },
     { id: 'fu_bd_pause', sceneId: 'basic-data', level: 'pause', riskReasons: JSON.stringify(['核心判断过程正被 AI 替代。', '你已经较难独立完成基础的数据清洗和分析。']), retainedCapabilities: JSON.stringify(['你仍可能保留部分数据直觉和简单操作能力。']), actionSuggestions: JSON.stringify(['暂停让 AI 端到端处理数据。', '先从最基础的数据操作恢复手动能力。', '把数据观察、方法选择和结果验证都先自己完成。']) },
   ];

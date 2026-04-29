@@ -6,6 +6,7 @@ import { TriggerRuleEngine } from './services/trigger-rule-engine';
 import { ResultLevelDecider } from './services/result-level-decider';
 import { ResultBuilder } from './services/result-builder';
 import { AiCoreService } from './services/ai-core.service';
+import { ConsistencyChecker } from './services/consistency-checker';
 import { ConfigRepository } from './repositories/config.repository';
 
 @Module({
@@ -17,6 +18,7 @@ import { ConfigRepository } from './repositories/config.repository';
     ResultLevelDecider,
     ResultBuilder,
     AiCoreService,
+    ConsistencyChecker,
     ConfigRepository,
   ],
 })

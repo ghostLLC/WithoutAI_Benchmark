@@ -130,17 +130,20 @@ User → apps/web (Next.js :3001) → apps/api (NestJS :3000) → services/ai-co
 
 When `POST /api/assessment/submit` is called, five services execute in order:
 
-1. **RiskScoreCalculator** — sums `option.riskScore × question.weight` across all answers
+1. **RiskScoreCalculator** — computes 5-dimension risk profile per answer, fits it to 0-100, then applies **scene-aware weights** (`SCENE_WEIGHTS` matrix). Each scene weights its critical dimensions higher: writing (thinking×1.5, organization×1.5), coding (execution×1.5, organization×1.3), learning (understanding×1.5, thinking×1.3), data (judgment×1.5, understanding×1.3). Also computes `completionAvgScore` — the average risk score across all "脱离AI可完成度" category questions for the safety net.
 2. **TriggerRuleEngine** — collects `triggerTags` from selected options (deduplicated). Key tags: `first_process_replaced`, `dependency_signal_detected`, `cannot_finish_without_ai`, `core_step_fully_replaced`
-3. **ResultLevelDecider** — thresholds: `<35 continue | 35-69 limit | ≥70 pause`. Plus pattern-based correction (全面退化→pause, 替代模式→limit) and single-dimension ≥80→pause override. Escalation triggers (`first_process_replaced`/`dependency_signal_detected`) force continue→limit. Pause triggers (`cannot_finish_without_ai`/`core_step_fully_replaced`) force limit→pause.
+3. **ResultLevelDecider** — thresholds: `<35 continue | 35-69 limit | ≥70 pause`. Plus pattern-based correction (全面退化→pause, 替代模式→limit) and single-dimension ≥80→pause override. Escalation triggers (`first_process_replaced`/`dependency_signal_detected`) force continue→limit. Pause triggers (`cannot_finish_without_ai`/`core_step_fully_replaced`) force limit→pause. **Completion safety net**: if `completionAvgScore ≥ 70` and base level is `continue`, forces at least `limit`.
 4. **ResultBuilder** — reads `FollowUp` table for the scene+level combo, assembles `riskReasons`, `retainedCapabilities`, `actionSuggestions`
-5. **AiCoreService** — calls AI Core `/ai/explain` and `/ai/suggest` in parallel (2s timeout). On failure, silently falls back to database text. Uses `summary !== null` / `priority !== null` to detect whether AI enhancement actually succeeded (fallback returns null for these fields).
+5. **ConsistencyChecker** — runs cross-validation on paired questions using the same underlying behavior (8 pairs, 2 per scene). If the risk level gap between paired answers ≥ 2, flags the inconsistency and sets `suggestionLevel = 'limit'`. Result is attached to `AssessmentResult.consistencyCheck`.
+6. **AiCoreService** — calls AI Core `/ai/explain` and `/ai/suggest` in parallel (2s timeout). On failure, silently falls back to database text. Uses `summary !== null` / `priority !== null` to detect whether AI enhancement actually succeeded (fallback returns null for these fields).
 
 ## Database (Prisma + SQLite)
 
 Four models: `Scene` → `Question` → `QuestionOption` + `FollowUp` (keyed by sceneId+level). JSON arrays are stored as strings in SQLite (`examples`, `focusCapabilities`, `signals`, `triggerTags`, etc.) and parsed at the repository layer.
 
 The seed file (`prisma/seed.ts`) is the single source of truth for all questions, options, scores, and follow-up content. After any scoring or content change, re-seed: `npx tsx prisma/seed.ts`.
+
+Writing and learning scene questions are hand-crafted with precise per-option dimension scores. Coding and data scenes use a mix: quick/standard core questions are hand-calibrated (bc_q01-q08, bd_q01-q08 in quick tier), while deep-tier questions use `dimsForCategory()` templates. When adjusting coding/data scene scoring, calibrate the core 8 questions first — they carry the highest weight in the pipeline.
 
 ## AI Core (Python/FastAPI)
 
@@ -151,5 +154,5 @@ Prompt builders in `app/prompts/` enforce product boundaries: explain prompts fo
 ## Key types (`packages/shared/src/assessment.ts`)
 
 `AssessmentLevel = 'continue' | 'limit' | 'pause'`
-`AssessmentResult` — the unified response shape for `POST /api/assessment/submit`
-`QuestionOption` carries `riskScore`, `signals` (RiskSignal[]), and `triggerTags` (string[]) — these drive the entire scoring pipeline.
+`AssessmentResult` — the unified response shape for `POST /api/assessment/submit`; includes optional `consistencyCheck` (`ConsistencyResult` with `passed`, `inconsistencies`, `suggestionLevel`)
+`QuestionOption` carries `riskScore`, `dimensionScores` (5-dim vector), `signals` (RiskSignal[]), and `triggerTags` (string[]) — these drive the entire scoring pipeline.

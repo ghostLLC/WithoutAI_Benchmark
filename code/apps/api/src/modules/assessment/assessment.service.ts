@@ -4,6 +4,7 @@ import { TriggerRuleEngine } from './services/trigger-rule-engine';
 import { ResultLevelDecider } from './services/result-level-decider';
 import { ResultBuilder } from './services/result-builder';
 import { AiCoreService } from './services/ai-core.service';
+import { ConsistencyChecker } from './services/consistency-checker';
 import { ConfigRepository } from './repositories/config.repository';
 import type {
   Scene, Question, AssessmentResult, FollowUpAction,
@@ -18,6 +19,7 @@ export class AssessmentService {
     private readonly resultLevelDecider: ResultLevelDecider,
     private readonly resultBuilder: ResultBuilder,
     private readonly aiCoreService: AiCoreService,
+    private readonly consistencyChecker: ConsistencyChecker,
     private readonly configRepository: ConfigRepository,
   ) {}
 
@@ -59,12 +61,15 @@ export class AssessmentService {
     }
 
     // 五维评分
-    const { baseRiskScore, dimensions, dominantPattern } =
+    const { baseRiskScore, dimensions, dominantPattern, completionAvgScore } =
       await this.riskScoreCalculator.calculate(sceneId, d, answers);
     const triggeredRules = await this.triggerRuleEngine.detect(sceneId, d, answers);
     const finalLevel = this.resultLevelDecider.decide(
-      baseRiskScore, triggeredRules, dimensions, dominantPattern,
+      baseRiskScore, triggeredRules, dimensions, dominantPattern, completionAvgScore,
     );
+
+    // 行为一致性检测
+    const consistencyCheck = this.consistencyChecker.check(sceneId, answers);
 
     let result = await this.resultBuilder.build(
       sceneId, baseRiskScore, triggeredRules, finalLevel,
@@ -88,6 +93,7 @@ export class AssessmentService {
       actionSuggestions: hasAiSuggest ? suggestResult.suggestions : result.actionSuggestions,
       aiEnhanced,
       aiSummary: explainResult.summary ?? undefined,
+      consistencyCheck,
     };
 
     return result;

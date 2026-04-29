@@ -11,6 +11,7 @@ export class ResultLevelDecider {
     triggeredRules: string[],
     dimensions: DimensionProfile,
     dominantPattern: RiskPattern,
+    completionAvgScore?: number,
   ): AssessmentLevel {
     let level: AssessmentLevel =
       baseRiskScore >= 70 ? 'pause' :
@@ -39,6 +40,11 @@ export class ResultLevelDecider {
     );
     if (maxDim >= 80 && level !== 'pause') {
       level = 'pause';
+    }
+
+    // "脱离AI可完成度"兜底：若该类题目平均风险分 ≥70，至少输出 limit
+    if (typeof completionAvgScore === 'number' && completionAvgScore >= 70 && level === 'continue') {
+      level = 'limit';
     }
 
     return level;

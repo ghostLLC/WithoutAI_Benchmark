@@ -63,8 +63,10 @@ WithoutAI Benchmark 不是一个「AI 技巧测试」或「人格测评」，而
 | **双模式评估** | 测评模式（规则引擎，无需 AI）+ 对话模式（LLM 访谈，含五维评分） |
 | **五维能力画像** | 理解 / 思考 / 拆解 / 执行 / 判断，每维 0-100 分雷达图 |
 | **风险仪表盘** | 半圆弧 gauge 展示综合风险分，三色分区（安全 / 警戒 / 危险） |
-| **触发规则引擎** | 4 条关键规则（首次过程替代 / 依赖信号 / 无法脱离 AI / 核心步骤替代） |
-| **三档结论** | continue（继续）/ limit（限制）/ pause（暂停），含跨维度模式校正 |
+| **触发规则引擎** | 4 条关键规则（首次过程替代 / 依赖信号 / 无法脱离 AI / 核心步骤替代） + 兜底安全网 |
+| **三档结论** | continue（继续）/ limit（限制）/ pause（暂停），含跨维度模式校正与脱离AI完成度兜底 |
+| **场景感知评分** | 四场景独立维度权重矩阵，写作偏思考/组织，编程偏执行/组织，学习偏理解/思考，数据偏理解/判断 |
+| **行为一致性检测** | 8对交叉验证题对，同行为不同问法检测自述失真，不一致时标记 limit 建议 |
 | **AI 增强层** | 测评模式下 LLM 增强解释与建议文本，对话模式下 AI 直接评分 |
 | **静默降级** | AI Core 不可用时自动回退到数据库文案，不影响测评核心功能 |
 | **多级测评深度** | 快速（核心风险）/ 标准（全维度）/ 深度（情境+自检），三档可选 |
@@ -87,13 +89,14 @@ WithoutAI Benchmark 不是一个「AI 技巧测试」或「人格测评」，而
 │   POST /api/assessment/submit                                        │
 │        ↓                                                             │
 │   ┌──────────────────────────────────────────────────────┐           │
-│   │              Assessment Pipeline (5 steps)            │           │
+│   │              Assessment Pipeline (6 steps)            │           │
 │   │                                                      │           │
-│   │  ① RiskScoreCalculator  — 五维风险累加 → 模式检测    │           │
+│   │  ① RiskScoreCalculator  — 五维风险累加 → 场景权重    │           │
 │   │  ② TriggerRuleEngine    — 收集触发标签               │           │
-│   │  ③ ResultLevelDecider   — continue/limit/pause 判定  │           │
+│   │  ③ ResultLevelDecider   — continue/limit/pause + 兜底│           │
 │   │  ④ ResultBuilder        — 组装 FollowUp 文案         │           │
-│   │  ⑤ AiCoreService        — 并行增强 explain + suggest │           │
+│   │  ⑤ ConsistencyChecker   — 交叉验证 → 行为一致性      │           │
+│   │  ⑥ AiCoreService        — 并行增强 explain + suggest │           │
 │   └──────────────────────────────────────────────────────┘           │
 │                                                                      │
 │   POST /api/assessment/converse → 代理到 AI Core /ai/converse        │
@@ -115,9 +118,10 @@ WithoutAI Benchmark 不是一个「AI 技巧测试」或「人格测评」，而
 POST /api/assessment/submit { sceneId, depth, answers[] }
       ↓
 ① RiskScoreCalculator
-   - option.riskScore × question.weight → 加权累加
-   - option.dimensionScores → 五维向量聚合 → 归一化
+   - option.dimensionScores × sceneWeightMatrix → 加权累加
+   - option.riskScore × question.weight → 辅助参考
    - 检测主导风险模式（全面退化 / 替代模式 / 启动依赖 / 外围依赖 / 健康辅助）
+   - 收集"脱离AI可完成度"类别平均风险分，用于兜底判断
       ↓
 ② TriggerRuleEngine
    - 收集选中 option 的 triggerTags（去重）
@@ -129,19 +133,26 @@ POST /api/assessment/submit { sceneId, depth, answers[] }
    - 跨维度模式校正: 全面退化 → pause / 替代模式 → limit
    - 触发规则校正: escalation → 继续→限制 / pause trigger → 限制→暂停
    - 单维度 ≥80 强制 pause
+   - 脱离AI完成度兜底: 平均分≥70 → 至少limit（防止温和误判）
       ↓
 ④ ResultBuilder
    - 查询 FollowUp 表（sceneId + level → 文案模板）
    - 组装 riskReasons / retainedCapabilities / actionSuggestions
+   - continue 级别包含提醒性风险提示（非空数组）
       ↓
-⑤ AiCoreService
+⑤ ConsistencyChecker
+   - 8对交叉验证题对（每场景2对），检测同行为不同问法的答案一致性
+   - 风险等级差 ≥2 → 标记不一致 → suggestionLevel = 'limit'
+   - 结果写入 AssessmentResult.consistencyCheck
+      ↓
+⑥ AiCoreService
    - 并行调用 POST /ai/explain + POST /ai/suggest（各 2s timeout）
    - 成功: 替换为 LLM 增强文本
    - 失败: summary=null / priority=null → 静默降级为 DB 原文
       ↓
 AssessmentResult { finalLevel, baseRiskScore, dimensions, dominantPattern,
                    triggeredRules, riskReasons, retainedCapabilities,
-                   actionSuggestions, aiEnhanced, aiSummary }
+                   actionSuggestions, aiEnhanced, aiSummary, consistencyCheck }
 ```
 
 ### Converse Pipeline
@@ -206,11 +217,12 @@ WithoutAI_Benchmark/
     │               ├── repositories/
     │               │   └── config.repository.ts   # Prisma 数据访问层
     │               └── services/
-    │                   ├── risk-score-calculator.ts    # ① 五维评分
+    │                   ├── risk-score-calculator.ts    # ① 五维评分（含场景权重）
     │                   ├── trigger-rule-engine.ts      # ② 触发规则
-    │                   ├── result-level-decider.ts     # ③ 结论判定
+    │                   ├── result-level-decider.ts     # ③ 结论判定（含兜底）
     │                   ├── result-builder.ts           # ④ 结果组装
-    │                   └── ai-core.service.ts          # ⑤ AI 编排 + 对话代理
+    │                   ├── consistency-checker.ts      # ⑤ 行为一致性检测
+    │                   └── ai-core.service.ts          # ⑥ AI 编排 + 对话代理
     │
     ├── services/
     │   └── ai-core/                    # FastAPI AI 服务
@@ -265,9 +277,17 @@ WithoutAI_Benchmark/
 
 ## Core Modules
 
-### 1. `risk-score-calculator.ts` — 五维风险评分与模式检测
+### 1. `risk-score-calculator.ts` — 五维风险评分与模式检测（场景感知）
 
-加权累加所有选中选项的风险分与维度分，输出综合风险指数和主导模式识别。
+加权累加所有选中选项的维度分，应用场景权重矩阵后输出综合风险指数和主导模式识别。
+
+**场景权重矩阵**：不同场景对五个维度的敏感度不同：
+| 场景 | 高权重维度 | 低权重维度 |
+|---|---|---|
+| 写作与汇报 | thinking×1.5, organization×1.5 | execution×0.7 |
+| 学习与资料整理 | understanding×1.5, thinking×1.3 | execution×0.7 |
+| 基础编程 | execution×1.5, organization×1.3 | understanding×0.7 |
+| 基础数据处理 | judgment×1.5, understanding×1.3 | thinking×0.7 |
 
 | 指标 | 计算方式 |
 |---|---|
@@ -296,16 +316,19 @@ WithoutAI_Benchmark/
 | `cannot_finish_without_ai` | 离开 AI 难以独立完成任务 | pause trigger：limit → pause |
 | `core_step_fully_replaced` | 核心步骤已被 AI 完全替代 | pause trigger：limit → pause |
 
-### 3. `result-level-decider.ts` — 三档结论判定
+### 3. `result-level-decider.ts` — 三档结论判定（含兜底）
 
-四层判定逻辑，按优先级依次执行：
+五层判定逻辑，按优先级依次执行：
 
 ```text
 ① 基础阈值: baseRiskScore < 35 → continue | 35-69 → limit | ≥70 → pause
 ② 模式校正: 全面退化 → pause | 替代模式 + continue → limit
 ③ 规则校正: escalation trigger + continue → limit | pause trigger + limit → pause
 ④ 单维兜底: max(dimensions) ≥ 80 → pause
+⑤ 完成度兜底: completionAvgScore ≥ 70 + continue → limit
 ```
+
+第⑤层确保"脱离 AI 无法完成最小版本"的用户不会因为其他维度分数中和而被误判为 continue。
 
 ### 4. `result-builder.ts` — 结果文案组装
 
@@ -340,7 +363,22 @@ const res = await fetch(`${AI_CORE_URL}/ai/converse`, {
 // 失败 → 返回 null → Controller 抛出 400
 ```
 
-### 6. `ai-core/app/llm/factory.py` — LLM 客户端工厂
+### 6. `consistency-checker.ts` — 行为一致性检测
+
+对同一行为通过不同问法进行交叉验证，防止用户自述失真：
+
+```typescript
+// 交叉验证题对示例（共8对，每场景2对）
+{ label: '起始方式一致性', questionIds: ['wr_q01', 'wr_q43'] }
+{ label: '独立编码能力自检', questionIds: ['bc_q02', 'bc_q10'] }
+```
+
+- 计算每题答案的风险等级（a=0, b=1, c=2）
+- 风险等级差 ≥ 2 → 标记不一致 → `suggestionLevel = 'limit'`
+- 结果写入 `AssessmentResult.consistencyCheck`，在结果页可用于提示
+- 不对结论做强制覆盖，作为辅助信号供前端选择性展示
+
+### 7. `ai-core/app/llm/factory.py` — LLM 客户端工厂
 
 自动选择后端，不调用任何外部 API 时也能工作：
 
@@ -357,7 +395,7 @@ else:
 
 `MockLLMClient` 返回 `[mock] 这是一个占位响应`，触发路由层 `_build_fallback_response()` 生成基于模板的正式文本。
 
-### 7. `ai-core/app/prompts/converse.py` — 对话评估 System Prompt
+### 8. `ai-core/app/prompts/converse.py` — 对话评估 System Prompt
 
 定义 LLM 的完整行为约束，包含：
 
@@ -366,7 +404,7 @@ else:
 - **产品边界**：不做人格评价、不说道德说教、不教 AI 技巧
 - **JSON 输出格式**：question（继续提问）或 assessment（给出结论，含五维评分）
 
-### 8. `prisma/seed.ts` — 题库种子
+### 9. `prisma/seed.ts` — 题库种子
 
 **单一数据源** — 所有题目、选项、分值、标签和 FollowUp 文案均定义在此，经 Prisma 写入 SQLite。
 
@@ -627,6 +665,10 @@ docker compose up -d --build
 - [x] Docker Compose 部署
 - [x] Vercel + Railway $0 部署方案
 - [x] 线上运行: [without-ai-benchmark.vercel.app](https://without-ai-benchmark.vercel.app)
+- [x] 场景感知维度权重 — 四场景独立加权矩阵，各场景高权重维度不同
+- [x] 脱离AI完成度兜底 — 无法脱离AI时强制至少 limit，避免温和误判
+- [x] continue 级别风险提示 — 安全区间仍包含提醒性预警，防止边界松动
+- [x] 行为一致性检测 — 8对交叉验证题对，检测自述失真
 - [ ] 更多任务场景
 - [ ] 场景对比：同一用户跨场景 AI 使用画像
 - [ ] HTTPS 与自定义域名
