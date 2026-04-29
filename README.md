@@ -395,8 +395,8 @@ interface OptDef {
 
 ### 环境要求
 
-- **Node.js** ≥ 20
-- **pnpm** ≥ 8
+- **Node.js** 20.x
+- **pnpm** 9.x
 - **Python** ≥ 3.11
 - **Git**
 
@@ -626,12 +626,10 @@ docker compose up -d --build
 - [x] 响应式明亮主题
 - [x] Docker Compose 部署
 - [x] Vercel + Railway $0 部署方案
+- [x] 线上运行: [without-ai-benchmark.vercel.app](https://without-ai-benchmark.vercel.app)
 - [ ] 更多任务场景
-- [ ] 用户历史记录与趋势追踪
-- [ ] PostgreSQL 迁移（多实例部署）
 - [ ] 场景对比：同一用户跨场景 AI 使用画像
 - [ ] HTTPS 与自定义域名
-- [ ] CI 自动化测试与部署
 
 ---
 
