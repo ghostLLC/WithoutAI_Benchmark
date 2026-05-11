@@ -1,158 +1,125 @@
 # CLAUDE.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
-
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
-
-## 1. Think Before Coding
-
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
-
-Before implementing:
-
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-
-## 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-## 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-## 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
----
-
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
-
----
-
-Following file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project overview
 
-WithoutAI Benchmark is a **task-level AI usage boundary detector**. It tells users whether they should continue, limit, or pause AI use for a specific task type — not whether they're "good at AI." The product doc in `product-docs/` is the source of truth for all product logic.
+WithoutAI Benchmark is a **task-level AI usage boundary detector** — it tells users whether they should continue, limit, or pause AI use for a specific task type. It is NOT an AI skills test or personality quiz. The product doc at `product-docs/ai-usage-product-doc-v1.md` is the source of truth for all product logic.
 
 ## Essential commands
 
+All commands run from `code/`:
+
 ```bash
-# Install (run once)
-cd code && pnpm install
+# Install (first time)
+pnpm install
 cd packages/shared && npx tsc && cd ../..
 cd apps/api && npx prisma migrate dev --name init && npx prisma generate && npx tsx prisma/seed.ts
 
-# Development servers
-pnpm dev:api     # NestJS on :3000
-pnpm dev:web     # Next.js on :3001
-pnpm dev:ai      # FastAPI on :8000
+# Development (three terminals)
+pnpm dev:api    # NestJS → :3000
+pnpm dev:web    # Next.js → :3001
+pnpm dev:ai     # FastAPI → :8000 (cd services/ai-core && uvicorn)
 
 # Testing
-pnpm test:api    # Jest (tests for core scoring)
-pnpm test:ai     # pytest (22 tests, 3 suites)
-pnpm test        # both
+pnpm test:api   # Jest — core scoring pipeline
+pnpm test:ai    # pytest -v (22 tests, 3 suites)
+pnpm test       # both
 
-# Prisma
-cd apps/api
-npx prisma generate          # regenerate client after schema change
-npx prisma migrate dev --name <name>  # create migration
-npx tsx prisma/seed.ts       # re-seed (wipes and repopulates)
+# Prisma (from apps/api/)
+npx prisma generate                        # regenerate client after schema change
+npx prisma migrate dev --name <name>       # create migration
+npx tsx prisma/seed.ts                     # re-seed (wipes and repopulates)
 
-# AI Core
-cd services/ai-core
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-python -m pytest tests/ -v
+# AI Core (from services/ai-core/)
+pip install -r requirements.txt            # Python deps
+python -m pytest tests/ -v                 # run Python tests
 ```
 
 ## Architecture
 
 ```
-User → apps/web (Next.js :3001) → apps/api (NestJS :3000) → services/ai-core (FastAPI :8000)
-                                        ↓                            ↓
-                                  Prisma + SQLite             DeepSeek LLM (optional)
-                                        ↓
-                                  packages/shared (TS types)
-                                  contracts/api-contracts.md
+User → apps/web (Next.js 14 :3001) → apps/api (NestJS 10 :3000) → services/ai-core (FastAPI :8000)
+                                           ↓                              ↓
+                                     Prisma + SQLite               DeepSeek V4 (optional)
+                                           ↓
+                                     packages/shared (canonical TS types)
 ```
+
+**Monorepo structure** (`code/`):
+- `apps/web/` — Next.js 14 frontend (React 18, Tailwind CSS 4)
+- `apps/api/` — NestJS 10 BFF (Prisma + SQLite, all business logic)
+- `services/ai-core/` — FastAPI Python AI service (LLM-powered text enhancement)
+- `packages/shared/` — canonical TS type definitions
+- `contracts/` — API contract docs (request/response examples)
+- `product-docs/` — product design documents (source of truth)
 
 ## Critical boundaries (do not violate)
 
 1. **Frontend never holds scoring rules** and never calls AI Core directly
 2. **AI Core only enhances text** (explain/suggest) — it does NOT decide `continue/limit/pause`
 3. **API/BFF is the single business-logic owner** — all rule calculation, result assembly, and AI orchestration happens here
-4. **Shared types** (`packages/shared/src/assessment.ts`) are the canonical TS type definitions for frontend and API
+4. **Shared types** (`packages/shared/src/assessment.ts`) are the canonical TS type definitions
 
-## Assessment pipeline (the core product logic)
+## Assessment pipeline (the core)
 
-When `POST /api/assessment/submit` is called, five services execute in order:
+When `POST /api/assessment/submit` is called, 6 services execute in order:
 
-1. **RiskScoreCalculator** — computes 5-dimension risk profile per answer, fits it to 0-100, then applies **scene-aware weights** (`SCENE_WEIGHTS` matrix). Each scene weights its critical dimensions higher: writing (thinking×1.5, organization×1.5), coding (execution×1.5, organization×1.3), learning (understanding×1.5, thinking×1.3), data (judgment×1.5, understanding×1.3). Also computes `completionAvgScore` — the average risk score across all "脱离AI可完成度" category questions for the safety net.
+1. **RiskScoreCalculator** — computes 5-dimension risk profile, applies scene-aware weights (`SCENE_WEIGHTS` matrix with per-dimension multipliers), fits to 0-100. Also computes `completionAvgScore` from "脱离AI可完成度" category questions.
 2. **TriggerRuleEngine** — collects `triggerTags` from selected options (deduplicated). Key tags: `first_process_replaced`, `dependency_signal_detected`, `cannot_finish_without_ai`, `core_step_fully_replaced`
-3. **ResultLevelDecider** — thresholds: `<35 continue | 35-69 limit | ≥70 pause`. Plus pattern-based correction (全面退化→pause, 替代模式→limit) and single-dimension ≥80→pause override. Escalation triggers (`first_process_replaced`/`dependency_signal_detected`) force continue→limit. Pause triggers (`cannot_finish_without_ai`/`core_step_fully_replaced`) force limit→pause. **Completion safety net**: if `completionAvgScore ≥ 70` and base level is `continue`, forces at least `limit`.
-4. **ResultBuilder** — reads `FollowUp` table for the scene+level combo, assembles `riskReasons`, `retainedCapabilities`, `actionSuggestions`
-5. **ConsistencyChecker** — runs cross-validation on paired questions using the same underlying behavior (8 pairs, 2 per scene). If the risk level gap between paired answers ≥ 2, flags the inconsistency and sets `suggestionLevel = 'limit'`. Result is attached to `AssessmentResult.consistencyCheck`.
-6. **AiCoreService** — calls AI Core `/ai/explain` and `/ai/suggest` in parallel (2s timeout). On failure, silently falls back to database text. Uses `summary !== null` / `priority !== null` to detect whether AI enhancement actually succeeded (fallback returns null for these fields).
+3. **ResultLevelDecider** — thresholds: `<35 continue | 35-69 limit | ≥70 pause`. Pattern correction (全面退化→pause), trigger escalation, single-dimension ≥80 overwrite, and completion safety net (`completionAvgScore ≥ 70` forces at least `limit`)
+4. **ResultBuilder** — queries `FollowUp` table by sceneId+level, assembles riskReasons, retainedCapabilities, actionSuggestions
+5. **ConsistencyChecker** — cross-validates 8 question pairs (2 per scene). Risk level gap ≥ 2 flags inconsistency, sets `suggestionLevel = 'limit'`
+6. **AiCoreService** — parallel calls to `/ai/explain` and `/ai/suggest` (2s timeout each). On failure: silent fallback to database text. Detects success via `summary !== null` / `priority !== null`
 
 ## Database (Prisma + SQLite)
 
-Four models: `Scene` → `Question` → `QuestionOption` + `FollowUp` (keyed by sceneId+level). JSON arrays are stored as strings in SQLite (`examples`, `focusCapabilities`, `signals`, `triggerTags`, etc.) and parsed at the repository layer.
+Four models: `Scene` → `Question` → `QuestionOption` + `FollowUp` (unique on sceneId+level).
 
-The seed file (`prisma/seed.ts`) is the single source of truth for all questions, options, scores, and follow-up content. After any scoring or content change, re-seed: `npx tsx prisma/seed.ts`.
+JSON arrays (`signals`, `triggerTags`, `depthLevels`, `examples`, etc.) are stored as strings in SQLite and parsed at the repository layer.
 
-Writing and learning scene questions are hand-crafted with precise per-option dimension scores. Coding and data scenes use a mix: quick/standard core questions are hand-calibrated (bc_q01-q08, bd_q01-q08 in quick tier), while deep-tier questions use `dimsForCategory()` templates. When adjusting coding/data scene scoring, calibrate the core 8 questions first — they carry the highest weight in the pipeline.
+**The seed file** (`apps/api/prisma/seed.ts`) is the single source of truth for all questions, options, scores, and follow-up content. After any scoring or content change, re-seed: `npx tsx prisma/seed.ts`.
+
+Question scoring quality varies by scene: writing/learning scene questions are hand-crafted with precise per-option dimension scores. Coding/data scenes use `dimsForCategory()` templates for deep-tier questions. When adjusting scoring, calibrate the hand-crafted questions first.
+
+## Product principles (4 hard constraints)
+
+All code and copy must respect:
+1. **No personality judgment** — conclusions are about "current task + current usage pattern", never about the person
+2. **No moralizing** — never say "you're too dependent" or "you should reflect". Present facts and risks only
+3. **No AI usage advice** — don't discuss prompt techniques, collaboration methods, or efficiency tips
+4. **Answer only one boundary question** — is AI assisting you or replacing you on this task?
 
 ## AI Core (Python/FastAPI)
 
-Two endpoints: `POST /ai/explain` and `POST /ai/suggest`. LLM client factory (`app/llm/factory.py`) auto-selects: `OpenAIClient` if `AI_CORE_LLM_API_KEY` is set, `MockLLMClient` otherwise. The mock client returns `[mock]` placeholder text — the fallback in the routers (`_build_fallback_response`) handles actual template-based text generation.
+Three endpoints: `POST /ai/explain`, `POST /ai/suggest`, `POST /ai/converse`.
 
-Prompt builders in `app/prompts/` enforce product boundaries: explain prompts forbid judgmental language and imperatives; suggest prompts provide actionable, scenario-specific advice.
+LLM client factory (`app/llm/factory.py`) auto-selects:
+- `AI_CORE_LLM_API_KEY` set → `OpenAIClient` (DeepSeek-compatible)
+- No key → `MockLLMClient` (returns `[mock]` placeholder → fallback template text in routers)
+
+Converse mode uses DeepSeek V4 with a system prompt that enforces product boundaries, 5-dimension scoring guidelines, and structured JSON output (`type: "question"` or `type: "assessment"`).
 
 ## Key types (`packages/shared/src/assessment.ts`)
 
-`AssessmentLevel = 'continue' | 'limit' | 'pause'`
-`AssessmentResult` — the unified response shape for `POST /api/assessment/submit`; includes optional `consistencyCheck` (`ConsistencyResult` with `passed`, `inconsistencies`, `suggestionLevel`)
-`QuestionOption` carries `riskScore`, `dimensionScores` (5-dim vector), `signals` (RiskSignal[]), and `triggerTags` (string[]) — these drive the entire scoring pipeline.
+- `AssessmentLevel = 'continue' | 'limit' | 'pause'` — the three output tiers
+- `AssessmentResult` — unified response shape; includes optional `consistencyCheck` (`ConsistencyResult`)
+- `Dimension = 'understanding' | 'thinking' | 'organization' | 'execution' | 'judgment'` — 5-dimension vector
+- `QuestionOption` carries `riskScore`, `dimensionScores` (5-dim Record), `signals` (RiskSignal[]), and `triggerTags` (string[]) — these drive the entire scoring pipeline
+- `RiskPattern` — 全面退化 | 替代模式 | 启动依赖 | 外围依赖 | 健康辅助
+
+## Scene-aware weights
+
+Each scene weights its critical dimensions higher:
+| Scene | High weight (×1.5) | Low weight (×0.7) |
+|---|---|---|
+| writing-report | thinking, organization | execution |
+| learning-material | understanding, thinking | execution |
+| basic-coding | execution, organization | understanding |
+| basic-data | judgment, understanding | thinking |
+
+## Testing
+
+- API tests: Jest (`apps/api/jest.config.ts`). One spec file at `result-level-decider.spec.ts` — tests the 5-layer decision logic with 30 cases.
+- AI Core tests: pytest, 3 files — `test_llm_factory.py`, `test_routers.py`, `test_schemas_prompts.py` (22 tests total).
+- When changing scoring logic, add cases to the Jest spec. When changing AI prompts, add cases to `test_schemas_prompts.py`.
